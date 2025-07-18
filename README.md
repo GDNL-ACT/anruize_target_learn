@@ -16,7 +16,7 @@
 ./script/mistral_llara_first_train.sh
 ````
 
-训练结果将保存在以下路径：
+训练结果将保存在以下路径（不用复制，只需要在最上面填变量FIRST_MAX_LENGTH、FIRST_CHECKPOINT_PATH、FIRST_CHECKPOINT_ID的值）：
 
 ```
 ./learn_from_target/$MODEL_NAME/llara_first/ml_$FIRST_MAX_LENGTH/$FIRST_CHECKPOINT_PATH/model/checkpoint-${FIRST_CHECKPOINT_ID}
@@ -46,6 +46,3 @@ FIRST_CHECKPOINT_ID=5
 ./script/mistral_llara_second_train.sh
 ```
 
-```
-
-```
