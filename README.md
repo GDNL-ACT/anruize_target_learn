@@ -12,7 +12,7 @@
 
 请根据实际情况调整 batch size 和 max length 参数，然后执行以下脚本开始一阶段训练：
 
-```bash
+```
 ./script/mistral_llara_first_train.sh
 ````
 
