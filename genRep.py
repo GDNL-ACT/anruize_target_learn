@@ -161,8 +161,8 @@ class GenRep(nn.Module):
             lora_config = LoraConfig(
                 r=lora_config['r'],                             
                 lora_alpha=lora_config['lora_alpha'],           
-                target_modules=["q_proj", "v_proj"],
-                # target_modules=["q_proj", "v_proj", "k_proj","o_proj","gate_proj","up_proj","down_proj"],
+                # target_modules=["q_proj", "v_proj"],
+                target_modules=["q_proj", "v_proj", "k_proj","o_proj","gate_proj","up_proj","down_proj"],
                 lora_dropout=lora_config['lora_dropout'],       
                 bias=lora_config['bias'], 
                 task_type="CAUSAL_LM"
