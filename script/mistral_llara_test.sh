@@ -20,6 +20,7 @@ for CHECKPOINT_ID in $(seq 10 10 100); do
 
     PEFT_MODEL_PATH="./learn_from_target/$MODEL_NAME/$MODE/ml_$MAX_LENGTH/$CHECKPOINT_PATH/model/checkpoint-$CHECKPOINT_ID"
     OUTPUT_PATH="./learn_from_target/$MODEL_NAME/$MODE/ml_$MAX_LENGTH/$CHECKPOINT_PATH/model/checkpoint-$CHECKPOINT_ID"
+    # OUTPUT_PATH="./learn_from_target/$MODEL_NAME/$MODE/ml_$MAX_LENGTH/$CHECKPOINT_PATH/model/checkpoint-$CHECKPOINT_ID/use_instructions"
     echo "Start checkpoint-$CHECKPOINT_ID"
     echo "OUTPUT_PATH-$OUTPUT_PATH"
     python aa_gene_test.py \
