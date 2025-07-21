@@ -10,7 +10,9 @@ export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
  
 MODEL_NAME="mistral-7b"
 BASE_MODEL_PATH="/data/LLM/mistral/mistral-7b-v0_2-chat"
-CHECKPOINT_PATH="lr_5e-05_tua_0.1_2025_07_18_16"
+CHECKPOINT_ID_FIRST_STEP=5
+CHECKPOINT_PATH_FISRT_STEP="lr_5e-05_tua_0.1_2025_07_21_11"
+CHECKPOINT_PATH="lr_0.0005_tua_1e-05_2025_07_21_11"
 MODE="llara_second_mean"
 POOLING_MODEL="mean"
 MAX_LENGTH=128
@@ -26,10 +28,12 @@ for CHECKPOINT_ID in $(seq 10 10 100); do
     python aa_gene_test.py \
         --model_name $MODEL_NAME \
         --base_model_name_or_path $BASE_MODEL_PATH \
+        --pre_checkpoint_path $PEFT_MODEL_PATH_FIRST_STEP \
         --peft_model_name_or_path $PEFT_MODEL_PATH \
         --mode $MODE \
         --pooling_mode $POOLING_MODEL \
         --output_dir $OUTPUT_PATH \
-        --batch_size $BATCH_SIZE
+        --batch_size $BATCH_SIZE \
+        --follow_llara
         # --use_instructions
 done

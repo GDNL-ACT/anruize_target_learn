@@ -18,7 +18,7 @@ from tqdm import tqdm
 import pickle
 import sys
 from torch.utils.data import DistributedSampler
-
+from itertools import islice
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
@@ -71,6 +71,7 @@ class Text2Target:
         self.enable_bidirectional = enable_bidirectional
         self.follow_mntp = follow_mntp
         self.accelerator = accelerator or Accelerator()
+        self.first_batch = True
 
     def rank_descending_tensor(self, stensor):
         sorted_indices = stensor.argsort(descending=True)  # 降序排序后的索引
@@ -220,12 +221,13 @@ class Text2Target:
                     if len(unique_ids) > 0:
                         vocab_tensor[unique_ids] = 1.0 / len(unique_ids)
                     targets.append(vocab_tensor)
-                    
-                    unique_ids = unique_ids.detach()
-                    unique_words = [self.tokenizer.decode([token_id]) for token_id in unique_ids]
-                    self.logger.info(f"text: {text}")
-                    for token_id, token_words in zip(unique_ids, unique_words):
-                        self.logger.info(f"token_ids: {token_id} -> token: {token_words}")
+                    if self.first_batch:
+                        self.first_batch = False
+                        unique_ids = unique_ids.detach()
+                        unique_words = [self.tokenizer.decode([token_id]) for token_id in unique_ids]
+                        self.logger.info(f"text: {text}")
+                        for token_id, token_words in islice(zip(unique_ids, unique_words), 2):
+                            self.logger.info(f"token_ids: {token_id} -> token: {token_words}")
 
             targets = torch.stack(targets).detach()    
             return targets, targets
@@ -304,6 +306,7 @@ class GenRepTrainer(Trainer):
         self.logger = logger
         self.text2target = text2target
         self.accelerator = accelerator or Accelerator()
+        self.first_batch = True
     
     def get_train_dataloader(self):
         # 你可以在这里自定义数据加载的方式
@@ -389,7 +392,7 @@ class GenRepTrainer(Trainer):
         def prob2top(prob):
             top_probs, top_indices = torch.topk(prob, 100)
             top_tokens = top_indices.tolist()
-            if self.mode == "llara_first":
+            if "llara_first" in self.mode:
                 top_words = [tokenizer.decode([token_id]) for token_id in top_tokens]
                 for token, prob in zip(top_words, top_probs):
                     self.logger.info(f"{[token]}: {prob}")
@@ -401,18 +404,19 @@ class GenRepTrainer(Trainer):
                 for token, prob, sort in zip(top_words, top_probs, top_sorts):
                     self.logger.info(f"{[token]}: {prob}({sort})")
                 
-
-        for text, original_target, target, logit in zip(texts, original_targets, targets, logits_log_softmax):
-            self.logger.info(f"text: {text}")
-            self.logger.info(f"logit: {logit.shape}")
-            self.logger.info(f"target: {target.shape}")
-            self.logger.info(f"Logits Probs:")
-            prob2top(logit)
-            if self.mode != "llara_first":
-                self.logger.info(f"Original Targets Probs:")
-                prob2top(original_target)
-            self.logger.info(f"Targets Probs:")
-            prob2top(target)
+        if self.first_batch:
+            self.first_batch = False
+            for text, original_target, target, logit in islice(zip(texts, original_targets, targets, logits_log_softmax), 2):
+                self.logger.info(f"text: {text}")
+                self.logger.info(f"logit: {logit.shape}")
+                self.logger.info(f"target: {target.shape}")
+                self.logger.info(f"Logits Probs:")
+                prob2top(logit)
+                if "llara_first" not in self.mode:
+                    self.logger.info(f"Original Targets Probs:")
+                    prob2top(original_target)
+                self.logger.info(f"Targets Probs:")
+                prob2top(target)
 
         targets = targets.to(logits.device).float()
         kl_div_loss = nn.KLDivLoss(reduction='batchmean')
@@ -438,7 +442,9 @@ class GenRepTrainer(Trainer):
     
         
     def save_model(self, output_dir=None, _internal_call=True):
-        
+
+        self.first_batch = True
+        self.text2target.first_batch = True
         if output_dir is None:
             output_dir = self.args.output_dir
         if self.accelerator.is_main_process:
@@ -594,7 +600,7 @@ if __name__ == "__main__":
         base = default_data_collator([{k: v for k, v in item.items() if k != "line_text" and k != "unique_id"} for item in batch])
         # base["line_text"] = [item["line_text"] for item in batch]
         return base
-    if args.mode == "llara_first":      
+    if "llara_first" in args.mode:      
         pass
     else:
         dataloader = DataLoader(

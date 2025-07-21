@@ -122,7 +122,7 @@ if __name__ == "__main__":
         default=None,
     )
     parser.add_argument(
-        "--peft_model_name_or_path_mntp",
+        "--pre_checkpoint_path",
         type=str,
         default=None,
     )
@@ -141,6 +141,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--enable_bidirectional", action='store_true', help='')
     parser.add_argument("--follow_mntp", action='store_true', help='')
+    parser.add_argument("--follow_llara", action='store_true', help='')
     parser.add_argument(
         "--max_length",
         type=int,
@@ -177,11 +178,12 @@ if __name__ == "__main__":
 
     genRep_model = GenRep.from_pretrained(
            base_model_path = args.base_model_name_or_path, 
-           checkpoint_path_mntp=args.peft_model_name_or_path_mntp, 
+           pre_checkpoint_path=args.pre_checkpoint_path, 
            checkpoint_path=args.peft_model_name_or_path, 
            prompt = args.prompt,
            enable_bidirectional=args.enable_bidirectional,
            follow_mntp=args.follow_mntp,
+           follow_llara=args.follow_llara,
            pooling_mode = args.pooling_mode,
            max_length = args.max_length,
            device_map="cuda" if torch.cuda.is_available() else "cpu",
