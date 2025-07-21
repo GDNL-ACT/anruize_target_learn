@@ -42,4 +42,5 @@ accelerate launch \
     --output_dir learn_from_target \
     --max_length 128 \
     --follow_llara \
-    --dataset_path './data/wiki1m_for_simcse_mini.txt'
+    --dataset_path './data/wiki1m_for_simcse_mini.txt' \
+    --tau 0.1
