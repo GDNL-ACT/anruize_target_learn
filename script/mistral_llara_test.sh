@@ -30,4 +30,5 @@ for CHECKPOINT_ID in $(seq 10 10 100); do
         --pooling_mode $POOLING_MODEL \
         --output_dir $OUTPUT_PATH \
         --batch_size $BATCH_SIZE
+        # --use_instructions
 done
