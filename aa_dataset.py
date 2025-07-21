@@ -25,7 +25,7 @@ class WikiDataset(Dataset):
         self.mode = mode
         self.accelerator = accelerator or Accelerator()
 
-        if mode == "llara_first":
+        if "llara_first" in mode:
             self.lines = datasets.load_dataset(
                 file_path, 
                 split='train'

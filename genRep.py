@@ -107,7 +107,7 @@ class GenRep(nn.Module):
         logger=None,
         lora_config: dict = {},
         checkpoint_path: str = '',
-        checkpoint_path_mntp: str = '',
+        pre_checkpoint_path: str = '',
         trainable: bool = False,
         enable_bidirectional: bool = False,
         follow_mntp: bool = False,
@@ -193,12 +193,20 @@ class GenRep(nn.Module):
                 peft_target = base_model.get_model_for_peft()
                 peft_target = PeftModel.from_pretrained(
                     peft_target,
-                    checkpoint_path_mntp,
+                    pre_checkpoint_path,
                 )
                 peft_target = peft_target.merge_and_unload()
                 if hasattr(peft_target, 'peft_config'):
                     del peft_target.peft_config
                 base_model.set_model_for_peft(peft_target)
+
+            if follow_llara:
+                peft_target = PeftModel.from_pretrained(
+                    base_model,
+                    pre_checkpoint_path,
+                )
+                base_model = peft_target.merge_and_unload()
+                
             if checkpoint_path:
                 model = PeftModel.from_pretrained(
                     base_model, 
@@ -225,9 +233,9 @@ class GenRep(nn.Module):
         with autocast(device_type='cuda', dtype=torch.bfloat16):
             # for i, input_id in enumerate(input_ids):
             #     text = self.tokenizer.decode(input_id, skip_special_tokens=False)
-            #     logger.info(f"Sample {i} text:")
-            #     logger.info("input_id：", input_id)
-            #     logger.info("text：", text)
+            #     print(f"Sample {i} text:")
+            #     print("input_id：", input_id)
+            #     print("text：", text)
             outputs = self.model(
                     input_ids, 
                     attention_mask=attention_mask, 
@@ -300,6 +308,10 @@ class GenRep(nn.Module):
                 ],
                 dim=0,
             )
+        elif self.pooling_mode == "last_eight_mean":
+            embeddings = last_hidden_states[:, -8:, :]
+            embeddings = embeddings.mean(dim=1)
+           
         else:
             raise ValueError(f"Invalid pooling mode: {self.pooling_mode}")
 
@@ -378,15 +390,46 @@ class GenRep(nn.Module):
         # sys.stdout = StreamToLogger(logger, logging.INFO)
         # sys.stderr = StreamToLogger(logger, logging.ERROR)
     
+        if self.pooling_mode == "last_eight_mean":
+            prefix = '"'
+            suffix = '", summarize the above passage within eight words: <s1><s2><s3><s4><s5><s6><s7><s8>'
+            prefix_ids = self.tokenizer(prefix, truncation=True, max_length=self.max_length, return_tensors=None)['input_ids']
+            suffix_ids = self.tokenizer(suffix, truncation=True, max_length=self.max_length, return_tensors=None, add_special_tokens=False)['input_ids']
 
-        tokenized_sentences = self.tokenizer(
-            sentences_batch, 
-            truncation=True, 
-            padding=True, 
-            max_length=self.max_length, 
-            return_tensors="pt"
-        )
-        # print(tokenized_sentences)
+            passages_inputs = []
+            for text in sentences_batch:  # 假设输入是texts列表
+                inputs = self.tokenizer(text,
+                                       truncation=True,
+                                       max_length=self.max_length - len(prefix_ids) - len(suffix_ids),
+                                       padding=False,
+                                       return_tensors=None,
+                                       add_special_tokens=False)
+        
+                
+                passages_input_ids = prefix_ids + inputs['input_ids'] + suffix_ids
+                passages_attention_mask = [1] * len(passages_input_ids)
+                
+                passages_inputs.append({
+                    'input_ids': passages_input_ids,
+                    'attention_mask': passages_attention_mask
+                })
+
+            tokenized_sentences = self.tokenizer.pad(
+                passages_inputs,
+                padding=True,
+                max_length=self.max_length,
+                return_tensors='pt',
+            )
+                
+        else:
+            tokenized_sentences = self.tokenizer(
+                sentences_batch, 
+                truncation=True, 
+                padding=True, 
+                max_length=self.max_length, 
+                return_tensors="pt"
+            )
+
         tokenized_sentences = batch_to_device(tokenized_sentences, device)
         
         with torch.no_grad():

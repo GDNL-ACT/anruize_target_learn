@@ -25,7 +25,7 @@ accelerate launch \
     aa_gene_train.py \
     --model_name $MODEL_NAME \
     --base_model_name_or_path $BASE_MODEL_PATH \
-    --checkpoint_path ./learn_from_target/$MODEL_NAME/llara_first/ml_$FIRST_MAX_LENGTH/$FIRST_CHECKPOINT_PATH/model/checkpoint-${FIRST_CHECKPOINT_ID} \
+    --checkpoint_path ./learn_from_target/$MODEL_NAME/llara_first_mean/ml_$FIRST_MAX_LENGTH/$FIRST_CHECKPOINT_PATH/model/checkpoint-${FIRST_CHECKPOINT_ID} \
     --lora_r 16 \
     --lora_alpha 32 \
     --target_modules q_proj, v_proj, k_proj, o_proj, gate_proj, up_proj, down_proj \
