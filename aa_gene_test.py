@@ -71,7 +71,7 @@ class genRepWrapper:
             print("no instruction")
             instruction = ""
 
-        if "prompt" or "llara_second" in self.mode:
+        if "prompt" or "last" in self.mode:
             prompt_sentences = self.model._prompt_and_tokenize_batch(sentences)
         else:
             prompt_sentences = sentences
@@ -91,7 +91,7 @@ class genRepWrapper:
         if "request_qid" in kwargs:
             kwargs.pop("request_qid")
         
-        if "prompt" or "llara_second" in self.mode:
+        if "prompt" or "last" in self.mode:
             prompt_sentences = self.model._prompt_and_tokenize_batch(sentences)
         else:
             prompt_sentences = sentences
