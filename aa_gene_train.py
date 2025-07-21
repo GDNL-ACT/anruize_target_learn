@@ -204,7 +204,7 @@ class Text2Target:
 
         batch = {k: v for k, v in batch.items()}        
 
-        if self.mode == "llara_first":
+        if "llara_first" in self.mode:
             targets = []
             with torch.no_grad():
                 
@@ -231,7 +231,7 @@ class Text2Target:
             return targets, targets
         
         # prompt_lastpool_lmhead and noprompt_meanpool_lmhead
-        if "lmhead" in self.mode or "llara_second" in self.mode:
+        if "lmhead" in self.mode or "llara_second" in self.mode or "llara_original_style" in self.mode:
             outputs = self.model.forward_freeze(**batch)
             
             model = self.model.module.model if hasattr(self.model, "module") else self.model.model

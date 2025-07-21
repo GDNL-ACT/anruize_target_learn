@@ -43,15 +43,53 @@ class WikiDataset(Dataset):
         return len(self.lines)
 
     def __getitem__(self, idx):
-        
+
         text = self.lines[idx].strip()
-        if self.mode == "prompt_lastpool_lmhead" or "llara" in self.mode:
+        if self.mode == "llara_original_style":
+            prefix = '"'
+            suffix = '", summarize the above passage within eight words: <s1><s2><s3><s4><s5><s6><s7><s8>'
+            prefix_ids = self.tokenizer(prefix, truncation=True, max_length=self.max_length, return_tensors=None)['input_ids']
+            suffix_ids = self.tokenizer(suffix, truncation=True, max_length=self.max_length, return_tensors=None, add_special_tokens=False)['input_ids']
+        
+            inputs = self.tokenizer(text,
+                                   truncation=True,
+                                   max_length=self.max_length - len(prefix_ids) - len(suffix_ids),
+                                   padding=False,
+                                   return_tensors=None,
+                                   add_special_tokens=False)
+
+            input_ids = prefix_ids + inputs['input_ids'] + suffix_ids
+            attention_mask = [1] * len(input_ids)
+                
+            encoding = {
+                'input_ids': input_ids,
+                'attention_mask': attention_mask
+            }
+            
+            current_length = len(input_ids)
+            
+            if current_length >= self.max_length:
+                encoding['input_ids'] = input_ids[-self.max_length:]
+                encoding['attention_mask'] = attention_mask[-self.max_length:]
+                
+            else:
+                pad_length = self.max_length - current_length
+                pad_token_id = getattr(self.tokenizer, 'pad_token_id', 2)  
+
+                encoding['input_ids'] = [pad_token_id] * pad_length + input_ids
+                encoding['attention_mask'] = [0] * pad_length + attention_mask
+                
+            encoding["line_text"] = text  
+            return encoding
+            
+        
+        if self.mode == "prompt_lastpool_lmhead" or "last" in self.mode:
             truncated_sentence = self.model._prompt_and_tokenize(text)
 
         elif self.mode == "prompt_attention":
             truncated_sentence = self.model._prompt_and_tokenize(text)
         
-        elif self.mode == "noprompt_meanpool_lmhead":
+        elif self.mode == "noprompt_meanpool_lmhead" or "mean" in self.mode:
             truncated_sentence = text  
             
         encoding = self.tokenizer(
@@ -65,7 +103,9 @@ class WikiDataset(Dataset):
         encoding = {key: val.squeeze(0) for key, val in encoding.items()}
         encoding["line_text"] = text  
         
-        if self.mode == "llara_first":
+        
+            
+        if "llara_first" in self.mode:
             # nltk.download('stopwords', quiet=True)
             stop_words = stopwords.words('english')
             stop_words.extend(['!', ',' ,'.' ,'?'])

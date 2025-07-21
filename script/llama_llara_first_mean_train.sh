@@ -9,8 +9,8 @@ export CUDA_LAUNCH_BLOCKING=1
 export TORCH_NCCL_BLOCKING_WAIT=1
 export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 
-MODEL_NAME="mistral-7b"
-BASE_MODEL_PATH="/data/LLM/mistral/mistral-7b-v0_2-chat"
+MODEL_NAME="llama3-8b"
+BASE_MODEL_PATH="/data/LLM/llama3/llama3-8b-instruct"
 FIRST_MAX_LENGTH=128
 
 PORT=29600  # 你可以根据实际需要修改端口号
@@ -27,12 +27,12 @@ accelerate launch \
     --bias none \
     --prompt 'This_sentence_:_"*sent_0*"_means_in_one_word:"' \
     --learning_rate 5e-5 \
-    --per_device_train_batch_size 2 \
-    --gradient_accumulation_steps 2 \
+    --per_device_train_batch_size 32 \
+    --gradient_accumulation_steps 1 \
     --save_steps 5 \
     --max_train_steps 100 \
-    --mode llara_first \
-    --pooling_mode last \
+    --mode llara_first_mean \
+    --pooling_mode mean \
     --output_dir learn_from_target \
     --max_length $FIRST_MAX_LENGTH \
     --dataset_path 'cfli/pretrain_wiki'
