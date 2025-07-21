@@ -43,4 +43,4 @@ accelerate launch \
     --max_length 128 \
     --follow_llara \
     --dataset_path './data/wiki1m_for_simcse_mini.txt' \
-    --tau 0.1
+    --tau 0.0001
