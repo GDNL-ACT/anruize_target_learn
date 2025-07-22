@@ -34,10 +34,10 @@ accelerate launch \
     --bias none \
     --prompt 'This_sentence_:_"*sent_0*"_means_in_one_word:"' \
     --learning_rate 5e-5 \
-    --per_device_train_batch_size 2 \
+    --per_device_train_batch_size 16 \
     --gradient_accumulation_steps 2 \
     --save_steps 5 \
-    --max_train_steps 100 \
+    --max_train_steps 1000 \
     --mode llara_second_last \
     --pooling_mode last \
     --output_dir learn_from_target \
@@ -64,10 +64,10 @@ accelerate launch \
     --bias none \
     --prompt 'This_sentence_:_"*sent_0*"_means_in_one_word:"' \
     --learning_rate 5e-5 \
-    --per_device_train_batch_size 2 \
+    --per_device_train_batch_size 16 \
     --gradient_accumulation_steps 2 \
     --save_steps 5 \
-    --max_train_steps 100 \
+    --max_train_steps 1000 \
     --mode llara_second_last \
     --pooling_mode last \
     --output_dir learn_from_target \
