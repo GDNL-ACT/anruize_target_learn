@@ -10,10 +10,11 @@ export TORCH_NCCL_BLOCKING_WAIT=1
 export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 
 MODEL_NAME="mistral-7b"
-BASE_MODEL_PATH="/data/LLM/mistral/mistral-7b-v0_2-chat"
+BASE_MODEL_PATH="/nas-retrieval/zhijie.nzj/models/Mistral-7B-Instruct-v0.2"
+DATA_PATH="/mnt/workspace/zhijie.nzj/datasets/princeton-nlp/datasets-for-simcse/wiki1m_for_simcse.txt"
 FIRST_MAX_LENGTH=128
-FIRST_CHECKPOINT_PATH="lr_5e-05_tua_0.1_2025_07_18_15"
-FIRST_CHECKPOINT_ID=5
+FIRST_CHECKPOINT_PATH="lr_5e-05_tua_0.1_2025_07_20_02"
+FIRST_CHECKPOINT_ID=10000
 
 
 PORT=29600
@@ -43,7 +44,7 @@ accelerate launch \
     --output_dir learn_from_target \
     --max_length $SECOND_MAX_LENGTH \
     --follow_llara \
-    --dataset_path './data/wiki1m_for_simcse_mini.txt' \
+    --dataset_path $DATA_PATH \
     --tau $TEMPERATURE
 done
 
@@ -73,6 +74,6 @@ accelerate launch \
     --output_dir learn_from_target \
     --max_length $SECOND_MAX_LENGTH \
     --follow_llara \
-    --dataset_path './data/wiki1m_for_simcse_mini.txt' \
+    --dataset_path $DATA_PATH \
     --tau $TEMPERATURE
 done
