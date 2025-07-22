@@ -19,34 +19,34 @@ FIRST_CHECKPOINT_ID=10000
 
 PORT=29600
 
-TEMPERATURE=0.00001
-for SECOND_MAX_LENGTH in 256 512 1024; do
-accelerate launch \
-    --main_process_port $PORT \
-    --num_cpu_threads_per_process 1 \
-    aa_gene_train.py \
-    --model_name $MODEL_NAME \
-    --base_model_name_or_path $BASE_MODEL_PATH \
-    --checkpoint_path ./learn_from_target/$MODEL_NAME/llara_first_last/ml_$FIRST_MAX_LENGTH/$FIRST_CHECKPOINT_PATH/model/checkpoint-${FIRST_CHECKPOINT_ID} \
-    --lora_r 16 \
-    --lora_alpha 32 \
-    --target_modules q_proj, v_proj, k_proj, o_proj, gate_proj, up_proj, down_proj \
-    --lora_dropout 0.05 \
-    --bias none \
-    --prompt 'This_sentence_:_"*sent_0*"_means_in_one_word:"' \
-    --learning_rate 5e-5 \
-    --per_device_train_batch_size 16 \
-    --gradient_accumulation_steps 2 \
-    --save_steps 5 \
-    --max_train_steps 1000 \
-    --mode llara_second_last \
-    --pooling_mode last \
-    --output_dir learn_from_target \
-    --max_length $SECOND_MAX_LENGTH \
-    --follow_llara \
-    --dataset_path $DATA_PATH \
-    --tau $TEMPERATURE
-done
+# TEMPERATURE=0.00001
+# for SECOND_MAX_LENGTH in 256 512 1024; do
+# accelerate launch \
+#     --main_process_port $PORT \
+#     --num_cpu_threads_per_process 1 \
+#     aa_gene_train.py \
+#     --model_name $MODEL_NAME \
+#     --base_model_name_or_path $BASE_MODEL_PATH \
+#     --checkpoint_path ./learn_from_target/$MODEL_NAME/llara_first_last/ml_$FIRST_MAX_LENGTH/$FIRST_CHECKPOINT_PATH/model/checkpoint-${FIRST_CHECKPOINT_ID} \
+#     --lora_r 16 \
+#     --lora_alpha 32 \
+#     --target_modules q_proj, v_proj, k_proj, o_proj, gate_proj, up_proj, down_proj \
+#     --lora_dropout 0.05 \
+#     --bias none \
+#     --prompt 'This_sentence_:_"*sent_0*"_means_in_one_word:"' \
+#     --learning_rate 5e-5 \
+#     --per_device_train_batch_size 16 \
+#     --gradient_accumulation_steps 2 \
+#     --save_steps 5 \
+#     --max_train_steps 1000 \
+#     --mode llara_second_last \
+#     --pooling_mode last \
+#     --output_dir learn_from_target \
+#     --max_length $SECOND_MAX_LENGTH \
+#     --follow_llara \
+#     --dataset_path $DATA_PATH \
+#     --tau $TEMPERATURE
+# done
 
 SECOND_MAX_LENGTH=128
 for TEMPERATURE in 0.0001 1e-6; do
