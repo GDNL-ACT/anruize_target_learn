@@ -500,8 +500,10 @@ if __name__ == "__main__":
     parser.add_argument("--max_train_steps", type=int, default=2, help="")
 
     args = parser.parse_args()
-
-
+    
+    num_gpus = torch.cuda.device_count()
+    args.global_batch_size = args.per_device_train_batch_size * args.gradient_accumulation_steps * num_gpus
+    
     # Step 2: 设置存档路径
     output_dir = os.path.join(args.output_dir, args.model_name, args.mode, f"ml_{args.max_length}")
     os.makedirs(output_dir, exist_ok=True)
