@@ -35,6 +35,7 @@ class WikiDataset(Dataset):
                 if field not in self.lines.features:
                     raise ValueError(f"Dataset missing required field: {field}")
             self.lines = self.lines['input']
+            self.lines = [line for line in self.lines if line.strip()]
         else:
             with open(file_path, 'r', encoding='utf-8') as file:
                 self.lines = file.readlines()
