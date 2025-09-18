@@ -17,6 +17,7 @@ from torch.amp import autocast
 from peft.tuners.lora.layer import LoraLayer
 import sys
 import logging
+from torch.nn import CrossEntropyLoss
 # from models import MistralBiModel, LlamaBiModel, MistralBiForCausalLM, LlamaBiForCausalLM
 
 def batch_to_device(batch, target_device: device):
@@ -64,9 +65,11 @@ def batch_to_device(batch, target_device: device):
 #         self.setLevel(logging.ERROR)
 
 class GenRep(nn.Module):
-    def __init__(self, model: AutoModelForCausalLM, tokenizer: AutoTokenizer, accelerator = None, logger=None, output_dir=None,
+    def __init__(self, model: AutoModelForCausalLM, tokenizer: AutoTokenizer,
+                 accelerator = None, logger=None, output_dir=None,
                  pooling_mode: str = "mean",
-                 prompt: str = '*sent_0*', max_length: int = 256):
+                 prompt: str = '*sent_0*', max_length: int = 256,
+                 simcse:bool = False, simcse_dropout: float = 0.3):
         super().__init__()
         self.model = model
         self.tokenizer = tokenizer
@@ -75,6 +78,8 @@ class GenRep(nn.Module):
         self.text_max_length = max_length - 10   #prompt length is  10
         self.prompt = prompt
         self.pooling_mode = pooling_mode
+        self.simcse = simcse
+        self.simcse_dropout = simcse_dropout
         self.accelerator = accelerator or Accelerator()
         self.logger=logger
         self.output_dir=output_dir
@@ -108,14 +113,19 @@ class GenRep(nn.Module):
         lora_config: dict = {},
         checkpoint_path: str = '',
         pre_checkpoint_path: str = '',
+        pre_checkpoint_path1: str = '',
+        pre_checkpoint_path2: str = '',
         trainable: bool = False,
         enable_bidirectional: bool = False,
         follow_mntp: bool = False,
         follow_llara: bool = False,
+        follow_llara_double: bool = False,
+        simcse: bool = False,
+        simcse_dropout: float = 0.3,
         **kwargs,
     ):
 
-        keys = ["pooling_mode", "max_length", "prompt", "output_dir"]
+        keys = ["pooling_mode", "max_length", "prompt", "output_dir", "simcse_dropout", "simcse"]
         encoder_args = {
             key: kwargs.pop(key, None) for key in keys if kwargs.get(key) is not None
         }
@@ -132,7 +142,7 @@ class GenRep(nn.Module):
         )
         
         if trainable:
-            # config.gradient_checkpointing = True
+            config.gradient_checkpointing = True
             base_model = model_class.from_pretrained(
                 base_model_path,
                 config=config,
@@ -144,7 +154,7 @@ class GenRep(nn.Module):
                 peft_target = base_model.get_model_for_peft()
                 peft_target = PeftModel.from_pretrained(
                     peft_target,
-                    checkpoint_path,
+                    pre_checkpoint_path,
                 )
                 peft_target = peft_target.merge_and_unload()
                 if hasattr(peft_target, 'peft_config'):
@@ -154,19 +164,53 @@ class GenRep(nn.Module):
             if follow_llara:
                 peft_target = PeftModel.from_pretrained(
                     base_model,
-                    checkpoint_path,
+                    pre_checkpoint_path,
                 )
+                logger.info("merge model!!")
                 base_model = peft_target.merge_and_unload()
+
+            if follow_llara_double:
+                peft_target = PeftModel.from_pretrained(
+                    base_model,
+                    pre_checkpoint_path,
+                )
+                logger.info("merge model!!")
+                base_model = peft_target.merge_and_unload()
+
+                peft_target = PeftModel.from_pretrained(
+                    base_model,
+                    pre_checkpoint_path1,
+                )
+                logger.info("merge model!!")
+                base_model = peft_target.merge_and_unload()
+
+                # peft_target = PeftModel.from_pretrained(
+                #     base_model,
+                #     pre_checkpoint_path2,
+                # )
+                # logger.info("merge model!!")
+                # base_model = peft_target.merge_and_unload()
                 
-            lora_config = LoraConfig(
-                r=lora_config['r'],                             
-                lora_alpha=lora_config['lora_alpha'],           
-                # target_modules=["q_proj", "v_proj"],
-                target_modules=["q_proj", "v_proj", "k_proj","o_proj","gate_proj","up_proj","down_proj"],
-                lora_dropout=lora_config['lora_dropout'],       
-                bias=lora_config['bias'], 
-                task_type="CAUSAL_LM"
-            )
+            if simcse:
+                lora_config = LoraConfig(
+                    r=lora_config['r'],                             
+                    lora_alpha=lora_config['lora_alpha'],           
+                    target_modules=["q_proj", "v_proj", "k_proj"],
+                    # target_modules=["q_proj", "v_proj", "k_proj","o_proj","gate_proj","up_proj","down_proj"],
+                    lora_dropout=lora_config['lora_dropout'],       
+                    bias=lora_config['bias'], 
+                    task_type=None
+                )
+            else:
+                lora_config = LoraConfig(
+                    r=lora_config['r'],                             
+                    lora_alpha=lora_config['lora_alpha'],           
+                    target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],
+                    # target_modules=["q_proj", "v_proj", "k_proj","o_proj","gate_proj","up_proj","down_proj"],
+                    lora_dropout=lora_config['lora_dropout'],       
+                    bias=lora_config['bias'], 
+                    task_type="CAUSAL_LM"
+                )
             
             logger.info(lora_config)
             model = get_peft_model(base_model, lora_config)
@@ -200,12 +244,48 @@ class GenRep(nn.Module):
                     del peft_target.peft_config
                 base_model.set_model_for_peft(peft_target)
 
+                peft_target = base_model.get_model_for_peft()
+                peft_target = PeftModel.from_pretrained(
+                    peft_target,
+                    checkpoint_path,
+                )
+                peft_target = peft_target.merge_and_unload()
+                if hasattr(peft_target, 'peft_config'):
+                    del peft_target.peft_config
+                base_model.set_model_for_peft(peft_target)
+                print(type(base_model))
+                checkpoint_path=""
+                
             if follow_llara:
                 peft_target = PeftModel.from_pretrained(
                     base_model,
                     pre_checkpoint_path,
                 )
+                print("merge model!!")
                 base_model = peft_target.merge_and_unload()
+
+
+            if follow_llara_double:
+                peft_target = PeftModel.from_pretrained(
+                    base_model,
+                    pre_checkpoint_path,
+                )
+                print("merge model!!")
+                base_model = peft_target.merge_and_unload()
+
+                peft_target = PeftModel.from_pretrained(
+                    base_model,
+                    pre_checkpoint_path1,
+                )
+                print("merge model!!")
+                base_model = peft_target.merge_and_unload()
+
+                # peft_target = PeftModel.from_pretrained(
+                #     base_model,
+                #     pre_checkpoint_path2,
+                # )
+                # print("merge model!!")
+                # base_model = peft_target.merge_and_unload()
                 
             if checkpoint_path:
                 model = PeftModel.from_pretrained(
@@ -226,6 +306,7 @@ class GenRep(nn.Module):
     
     def forward(self, input_ids: torch.Tensor, 
                 attention_mask: torch.Tensor = None, 
+                labels: torch.Tensor = None, 
                 return_attentions=False, **kwargs):
         """
         Processes input sentences, tokenizes them, and applies the model to get embeddings.
@@ -233,20 +314,48 @@ class GenRep(nn.Module):
         with autocast(device_type='cuda', dtype=torch.bfloat16):
             # for i, input_id in enumerate(input_ids):
             #     text = self.tokenizer.decode(input_id, skip_special_tokens=False)
-            #     print(f"Sample {i} text:")
-            #     print("input_id：", input_id)
+                # print(f"Sample {i} text:")
+                # print("input_id：", input_id)
             #     print("text：", text)
-            outputs = self.model(
+            if self.simcse:
+                print("doing simcse")
+                outputs = self.model(
+                    input_ids, 
+                    attention_mask=attention_mask, 
+                    output_hidden_states=True, 
+                    return_dict=True,
+                    use_cache=False,
+                    attention_dropout=self.simcse_dropout,
+                    output_attentions=return_attentions
+                )
+            else:
+                outputs = self.model(
                     input_ids, 
                     attention_mask=attention_mask, 
                     output_hidden_states=True, 
                     return_dict=True,
                     use_cache=False,
                     output_attentions=return_attentions
-            )
+                )
             pooled_output = self._pool(input_ids, attention_mask, outputs.hidden_states[-1])
+            if labels is not None:
+            # Shift so that tokens < n predict n
+                logits = self.model.lm_head(outputs.hidden_states[-1])
+                # print(f"logits:{logits}")
+                # print(f"labels:{labels}")
+                shift_logits = logits[..., :-1, :].contiguous()
+                shift_labels = labels[..., 1:].contiguous()
+                # Flatten the tokens
+                loss_fct = CrossEntropyLoss()
+                shift_logits = shift_logits.view(-1, self.config.vocab_size)
+                shift_labels = shift_labels.view(-1)
+                # Enable model parallelism
+                shift_labels = shift_labels.to(shift_logits.device)
+                ar_loss = loss_fct(shift_logits, shift_labels)
+                return pooled_output, ar_loss
+            
     
-            if return_attentions:
+            elif return_attentions:
                 attention = outputs.attentions[-1]
                 for i in range(1, len(outputs.attentions)):
                     attention += outputs.attentions[i].detach()
@@ -280,6 +389,8 @@ class GenRep(nn.Module):
                     )
         hidden_states = outputs.hidden_states[-1].to(torch.float32)
         pooled_output = self._pool(input_ids, attention_mask, hidden_states)
+        
+
         if return_attentions:
             # attention = outputs.attentions[-1]
             attention = outputs.attentions[-1].detach()
