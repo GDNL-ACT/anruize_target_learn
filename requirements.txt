@@ -1,4 +1,4 @@
-accelerate==1.9.0
+accelerate==1.5.2
 aiohappyeyeballs==2.6.1
 aiohttp==3.11.14
 aiosignal==1.3.2
@@ -42,7 +42,6 @@ fonttools==4.58.5
 fqdn==1.5.1
 frozenlist==1.5.0
 fsspec==2024.3.1
-git-filter-repo==2.47.0
 h11==0.14.0
 hf-xet==1.1.3
 httpcore==1.0.8
@@ -84,8 +83,9 @@ matplotlib==3.10.3
 matplotlib-inline==0.1.7
 mdurl==0.1.2
 mistune==3.1.3
+modelscope==1.28.1
 mpmath==1.3.0
-mteb==1.14.12
+mteb==1.36.33
 multidict==6.2.0
 multiprocess==0.70.16
 murmurhash==1.0.12
