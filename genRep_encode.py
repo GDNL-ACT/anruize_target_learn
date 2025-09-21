@@ -107,8 +107,6 @@ class genRepEncode:
         # required for MEDI version of MTEB
         if isinstance(sentences[0], str):
             sentences = [[""] + [sentence] for sentence in sentences]
-        
-
         concatenated_input_texts = []
 
         for sentence in sentences:
